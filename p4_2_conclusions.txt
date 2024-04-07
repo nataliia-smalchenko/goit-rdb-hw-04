@@ -1,0 +1,44 @@
+Після зміни INNER JOIN на LEFT JOIN у наступному запиті жодних змін не було (до змін та після змін показувалось 518 рядків), незалежно від того скільки LEFT JOIN було додано:
+
+USE mydb;
+SELECT COUNT(*) AS rows_amount 
+FROM order_details INNER JOIN orders ON order_details.order_id = orders.id 
+    INNER JOIN customers ON orders.customer_id = customers.id
+    INNER JOIN products ON order_details.product_id = products.id
+    INNER JOIN categories ON products.category_id = categories.id
+    INNER JOIN employees ON employees.employee_id= orders.employee_id
+    INNER JOIN shippers ON shippers.id = orders.shipper_id
+    INNER JOIN suppliers ON suppliers.id = products.supplier_id;
+
+Після зміни перших шести INNER JOIN на RIGHT JOIN у попередньому запиті теж жодних змін не було (до змін та після змін показувалось 518 рядків). Але при зміні останнього INNER JOIN на RIGHT JOIN щоразу виникала помилка "Error Code: 2013. Lost connection to MySQL server during query". Наприклад, як у наступному запиті.
+
+USE mydb;
+SELECT COUNT(*) AS rows_amount 
+FROM (order_details INNER JOIN orders ON order_details.order_id = orders.id 
+    INNER JOIN customers ON orders.customer_id = customers.id
+    INNER JOIN products ON order_details.product_id = products.id
+    INNER JOIN categories ON products.category_id = categories.id
+    INNER JOIN employees ON employees.employee_id= orders.employee_id
+    INNER JOIN shippers ON shippers.id = orders.shipper_id)
+    RIGHT JOIN suppliers ON suppliers.id = products.supplier_id;
+
+
+Тому можна припустити, що таблиця "suppliers" містить постачальників, на яких не посилаються продукти з таблиці "products". Відповідно, оскільки після попередніх операцій таблиця досить велика, після виконання останнього RIGHT JOIN при переборі усіх варіантів.
+
+Для підтвердження припущення було виконано наступні запити:
+
+USE mydb;
+SELECT COUNT(*) AS rows_amount 
+FROM products INNER JOIN suppliers ON suppliers.id = products.supplier_id;
+
+USE mydb;
+SELECT COUNT(*) AS rows_amount 
+FROM products LEFT JOIN suppliers ON suppliers.id = products.supplier_id;
+
+USE mydb;
+SELECT COUNT(*) AS rows_amount 
+FROM products RIGHT JOIN suppliers ON suppliers.id = products.supplier_id;
+
+Але у всіх 3-х випадках отримали результат 77 рядків. Припущення не підтвердилось.
+Тому можна зробити висновок, що усі дані  цих таблиць пов'язані між собою, тобто немає рядка у цих таблицях який би не використовував посилання на інші таблиця, або на нього самого б не посилались інші таблиці.
+
